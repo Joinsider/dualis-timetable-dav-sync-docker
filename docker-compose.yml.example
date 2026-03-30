@@ -1,0 +1,15 @@
+services:
+  timetable:
+    build: .
+    restart: unless-stopped
+    environment:
+      SCHEDULE_API_URL: ""
+      SCHEDULE_API_TOKEN: "" # The API Token set in .env
+      BAIKAL_URL: ""
+      BAIKAL_USER: ""
+      BAIKAL_PASSWORD: ""
+      BAIKAL_CALENDAR: "dualis" # Use a dedicated calendar for this! The script regularly purges all events and readds the ones fetched from the api.
+      TIMEZONE: "Europe/Berlin"
+      WEEKS_AHEAD: "2"
+      UID_DOMAIN: "schedule-sync.local"
+      LOG_LEVEL: "INFO"
