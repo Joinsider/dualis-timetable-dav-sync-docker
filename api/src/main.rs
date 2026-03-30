@@ -1,13 +1,26 @@
 mod config;
 mod dualis;
 mod error;
+mod ical;
 mod middleware;
 mod routes;
 
 use axum::{middleware as axum_middleware, routing::get, Router};
 use std::sync::Arc;
+use std::time::Instant;
+use tokio::sync::RwLock;
 use tower_http::trace::TraceLayer;
 use tracing::info;
+
+pub struct AppState {
+    pub config: config::Config,
+    pub cache: RwLock<Option<CachedCalendar>>,
+}
+
+pub struct CachedCalendar {
+    pub ics: String,
+    pub generated_at: Instant,
+}
 
 #[tokio::main]
 async fn main() {
@@ -26,7 +39,10 @@ async fn main() {
     });
 
     let port = config.port;
-    let state = Arc::new(config);
+    let state = Arc::new(AppState {
+        config,
+        cache: RwLock::new(None),
+    });
 
     let protected = Router::new()
         .route("/timetable", get(routes::timetable))
@@ -38,6 +54,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/health", get(routes::health))
+        .route("/calendar.ics", get(routes::calendar_ics))
         .merge(protected)
         .layer(TraceLayer::new_for_http())
         .with_state(state);

@@ -71,6 +71,22 @@ impl DualisClient {
         parse_timetable(&html, week)
     }
 
+    /// Log in once and fetch timetables for multiple weeks with the same session.
+    pub async fn fetch_timetables(
+        &self,
+        username: &str,
+        password: &str,
+        weeks: &[IsoWeek],
+    ) -> Result<Vec<Timetable>, AppError> {
+        let session = self.login(username, password).await?;
+        let mut timetables = Vec::with_capacity(weeks.len());
+        for &week in weeks {
+            let html = self.timetable_html(&session, week).await?;
+            timetables.push(parse_timetable(&html, week)?);
+        }
+        Ok(timetables)
+    }
+
     /// Return the raw timetable HTML for debugging the table structure.
     pub async fn fetch_timetable_raw(
         &self,
