@@ -80,7 +80,12 @@ fn format_vevent(
         &mut out,
         &format!("DTEND;TZID={}:{}", config.timezone, dtend),
     );
-    fold_and_push(&mut out, &format!("SUMMARY:{}", escape_ical(&event.title)));
+    let summary = if event.is_exam {
+        format!("PRÜFUNG: {}", escape_ical(&event.title))
+    } else {
+        escape_ical(&event.title)
+    };
+    fold_and_push(&mut out, &format!("SUMMARY:{}", summary));
 
     if let Some(ref room) = event.room {
         let mut location = room.clone();
