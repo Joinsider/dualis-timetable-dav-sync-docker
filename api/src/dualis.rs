@@ -41,6 +41,7 @@ pub struct Event {
     pub room: Option<String>,
     pub lecturer: Option<String>,
     pub event_type: Option<String>,
+    pub is_exam: bool,
 }
 
 // ── Client ────────────────────────────────────────────────────────────────────
@@ -316,6 +317,11 @@ fn parse_timetable(html: &str, week: IsoWeek) -> Result<Timetable, AppError> {
             continue;
         }
 
+        let is_exam = cell
+            .attr("style")
+            .map(|s| s.to_lowercase().contains("background-color:#ff6666"))
+            .unwrap_or(false);
+
         debug!(day = %days[day_idx].weekday, %title, %time, "Event");
         days[day_idx].events.push(Event {
             time,
@@ -323,6 +329,7 @@ fn parse_timetable(html: &str, week: IsoWeek) -> Result<Timetable, AppError> {
             room,
             lecturer: None,
             event_type: None,
+            is_exam,
         });
     }
 
