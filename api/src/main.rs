@@ -10,7 +10,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
 use tower_http::trace::TraceLayer;
-use tracing::info;
+use tracing::{error, info};
 
 pub struct AppState {
     pub config: config::Config,
@@ -34,9 +34,18 @@ async fn main() {
         .init();
 
     let config = config::Config::from_env().unwrap_or_else(|e| {
-        eprintln!("Configuration error: {e}");
+        error!("Configuration error: {e}");
         std::process::exit(1);
     });
+
+    info!(
+        port = config.port,
+        username = %config.dualis_username,
+        weeks_ahead = config.weeks_ahead,
+        cache_ttl_seconds = config.cache_ttl_seconds,
+        calendar_name = %config.calendar_name,
+        "Config loaded"
+    );
 
     let port = config.port;
     let state = Arc::new(AppState {
