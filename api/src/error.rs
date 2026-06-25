@@ -5,6 +5,7 @@ use axum::{
 };
 use serde_json::json;
 use thiserror::Error;
+use tracing::{error, warn};
 
 #[derive(Debug, Error)]
 pub enum AppError {
@@ -33,6 +34,11 @@ impl IntoResponse for AppError {
             AppError::Parse(msg) => (StatusCode::BAD_GATEWAY, msg.clone()),
             AppError::Http(e) => (StatusCode::BAD_GATEWAY, e.to_string()),
         };
+        if status == StatusCode::UNAUTHORIZED {
+            warn!(%status, %message, "Request rejected");
+        } else {
+            error!(%status, %message, "Request failed");
+        }
         (status, Json(json!({ "error": message }))).into_response()
     }
 }

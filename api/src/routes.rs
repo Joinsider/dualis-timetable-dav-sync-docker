@@ -84,8 +84,9 @@ pub async fn calendar_ics(
     {
         let cache = state.cache.read().await;
         if let Some(ref cached) = *cache {
-            if cached.generated_at.elapsed() < ttl {
-                info!("Serving calendar from cache");
+            let age = cached.generated_at.elapsed();
+            if age < ttl {
+                info!(age_secs = age.as_secs(), "Serving calendar from cache");
                 return Ok((
                     StatusCode::OK,
                     [
@@ -99,7 +100,14 @@ pub async fn calendar_ics(
     }
 
     // Fetch fresh data
-    info!("Generating fresh calendar");
+    {
+        let cache = state.cache.read().await;
+        if let Some(ref cached) = *cache {
+            info!(expired_secs_ago = cached.generated_at.elapsed().as_secs().saturating_sub(ttl.as_secs()), "Cache expired, refreshing");
+        } else {
+            info!("No cached calendar, fetching");
+        }
+    }
     let today = Local::now().date_naive();
     let current_week = today.iso_week();
 
@@ -123,6 +131,9 @@ pub async fn calendar_ics(
             &weeks,
         )
         .await?;
+
+    let total_events: usize = timetables.iter().flat_map(|t| &t.days).map(|d| d.events.len()).sum();
+    info!(weeks = timetables.len(), total_events, "Calendar generated");
 
     let ics = ical::build_calendar(&timetables, &state.config);
 

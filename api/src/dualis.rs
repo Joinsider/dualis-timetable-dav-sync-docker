@@ -10,7 +10,7 @@ use chrono::{Datelike, Days, IsoWeek, NaiveDate, Weekday};
 use reqwest::{Client, ClientBuilder, redirect};
 use scraper::{Html, Selector};
 use serde::Serialize;
-use tracing::debug;
+use tracing::{debug, info, warn};
 
 use crate::error::AppError;
 
@@ -82,6 +82,7 @@ impl DualisClient {
         let session = self.login(username, password).await?;
         let mut timetables = Vec::with_capacity(weeks.len());
         for &week in weeks {
+            info!(week = %format!("{}-W{:02}", week.year(), week.week()), "Fetching week");
             let html = self.timetable_html(&session, week).await?;
             timetables.push(parse_timetable(&html, week)?);
         }
@@ -176,7 +177,8 @@ impl DualisClient {
             )));
         }
 
-        debug!(session_token, %redirect_url, "Login successful");
+        let token_preview = format!("{}…", &session_token[..session_token.len().min(8)]);
+        info!(token_preview, %redirect_url, "Login successful");
         Ok(Session { token: session_token })
     }
 }
@@ -201,8 +203,13 @@ impl DualisClient {
             .await?;
 
         // Extract the Stundenplan menu number from the nav (usually 000028 but may vary).
-        let menu_no = extract_scheduler_menu_no(&body, &session.token)
-            .unwrap_or_else(|| "000028".to_string());
+        let menu_no = match extract_scheduler_menu_no(&body, &session.token) {
+            Some(n) => n,
+            None => {
+                warn!("Could not extract scheduler menu number from nav, falling back to 000028");
+                "000028".to_string()
+            }
+        };
 
         // Compute Monday of the target week for the URL date parameter.
         let monday = NaiveDate::from_isoywd_opt(week.year(), week.week(), Weekday::Mon)
@@ -341,6 +348,9 @@ fn parse_timetable(html: &str, week: IsoWeek) -> Result<Timetable, AppError> {
     let prev = monday.checked_sub_days(Days::new(7)).map(|d| d.iso_week());
     let next = monday.checked_add_days(Days::new(7)).map(|d| d.iso_week());
     let fmt = |w: IsoWeek| format!("{}-W{:02}", w.year(), w.week());
+
+    let total_events: usize = days.iter().map(|d| d.events.len()).sum();
+    info!(week = %fmt(week), total_events, "Timetable parsed");
 
     Ok(Timetable {
         week: fmt(week),
