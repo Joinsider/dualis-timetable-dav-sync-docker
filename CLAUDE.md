@@ -48,10 +48,15 @@ The app is a single-binary Axum web server with shared state and an in-memory ca
 
 **Request flow for `/calendar.ics`:**
 1. `routes::calendar_ics` validates the `?token=` query param against `config.api_key`
-2. Checks the in-memory `RwLock<Option<CachedCalendar>>` in `AppState`; serves cached ICS if still within `CACHE_TTL_SECONDS`
-3. On cache miss: `DualisClient::fetch_timetables` logs in once and scrapes `WEEKS_AHEAD + 1` weeks
-4. `ical::build_calendar` converts the structured data into an RFC 5545-compliant ICS string
-5. Result is stored in cache and returned
+2. Parses optional `?from=YYYY-MM-DD` and `?to=YYYY-MM-DD` query params to determine the date range:
+   - Neither set → current week + `WEEKS_AHEAD` forward (default, cached)
+   - Only `from` → `from`'s week + `WEEKS_AHEAD` forward (not cached)
+   - Only `to` → `WEEKS_AHEAD` backward ending at `to`'s week (not cached)
+   - Both set → all weeks spanning `from` to `to` inclusive (not cached)
+3. For default requests: checks the in-memory `RwLock<Option<CachedCalendar>>` in `AppState`; serves cached ICS if still within `CACHE_TTL_SECONDS`
+4. On cache miss or custom range: `DualisClient::fetch_timetables` logs in once and scrapes the computed weeks
+5. `ical::build_calendar` converts the structured data into an RFC 5545-compliant ICS string
+6. Result is stored in cache (default requests only) and returned
 
 **Module responsibilities:**
 - `config.rs` — reads all config from env vars; fails fast if required vars are missing
