@@ -24,6 +24,12 @@ RUN apt-get update && \
 # Copy the stripped binary from the builder stage
 COPY --from=builder /tmp/dualis-scraper /usr/local/bin/dualis-scraper
 
+# Persistent state (failed login counter). Owned by appuser so a named
+# volume mounted here inherits writable permissions.
+RUN mkdir -p /data && chown appuser:appuser /data
+ENV LOGIN_STATE_FILE=/data/login-state.json
+VOLUME /data
+
 # Switch to the non-root user before running the app
 USER appuser
 
