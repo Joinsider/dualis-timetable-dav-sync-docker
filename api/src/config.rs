@@ -1,4 +1,5 @@
 use std::env;
+use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -11,6 +12,8 @@ pub struct Config {
     pub uid_domain: String,
     pub timezone: String,
     pub cache_ttl_seconds: u64,
+    pub login_max_retries: u32,
+    pub login_state_file: PathBuf,
 }
 
 impl Config {
@@ -37,6 +40,13 @@ impl Config {
                 .unwrap_or_else(|_| "3600".into())
                 .parse()
                 .map_err(|_| "CACHE_TTL_SECONDS must be a number".to_string())?,
+            login_max_retries: env::var("LOGIN_MAX_RETRIES")
+                .unwrap_or_else(|_| "2".into())
+                .parse()
+                .map_err(|_| "LOGIN_MAX_RETRIES must be a number".to_string())?,
+            login_state_file: env::var("LOGIN_STATE_FILE")
+                .unwrap_or_else(|_| "data/login-state.json".into())
+                .into(),
         })
     }
 }

@@ -15,6 +15,9 @@ pub enum AppError {
     #[error("Login failed: {0}")]
     LoginFailed(String),
 
+    #[error("Login locked: {0}")]
+    LoginLocked(String),
+
     #[error("Parse error: {0}")]
     Parse(String),
 
@@ -31,6 +34,7 @@ impl IntoResponse for AppError {
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
             AppError::LoginFailed(msg) => (StatusCode::BAD_GATEWAY, msg.clone()),
+            AppError::LoginLocked(msg) => (StatusCode::SERVICE_UNAVAILABLE, msg.clone()),
             AppError::Parse(msg) => (StatusCode::BAD_GATEWAY, msg.clone()),
             AppError::Http(e) => (StatusCode::BAD_GATEWAY, e.to_string()),
         };

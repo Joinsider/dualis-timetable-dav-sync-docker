@@ -64,6 +64,7 @@ The app is a single-binary Axum web server with shared state and an in-memory ca
 - `ical.rs` — builds ICS output including RFC 5545 line folding at 75 octets; hardcoded VTIMEZONE block for `Europe/Berlin`; exams are prefixed with `PRÜFUNG:` in SUMMARY
 - `routes.rs` — Axum handlers; `/timetable` and `/debug/timetable` are Bearer-token protected via middleware; `/calendar.ics` uses query-param auth
 - `middleware.rs` — extracts Bearer token from `Authorization` header, compares to `config.api_key`
+- `login_guard.rs` — wraps every Dualis login; counts consecutive `LoginFailed` errors, persists them to `LOGIN_STATE_FILE` (Docker volume `/data`) and refuses logins (`LoginLocked` → 503) once `1 + LOGIN_MAX_RETRIES` failures are reached. Reset by successful login, credential change (SHA-256 fingerprint) or deleting the file
 - `error.rs` — `AppError` enum with `IntoResponse` impl; login failures map to 502
 
 **Dualis scraping quirks** (documented in `dualis.rs`):

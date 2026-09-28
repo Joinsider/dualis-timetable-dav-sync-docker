@@ -12,3 +12,9 @@ services:
       UID_DOMAIN: "schedule-sync.local"
       TIMEZONE: "Europe/Berlin"
       CACHE_TTL_SECONDS: "3600"
+      LOGIN_MAX_RETRIES: "2"
+    volumes:
+      - timetable-data:/data
+
+volumes:
+  timetable-data:
