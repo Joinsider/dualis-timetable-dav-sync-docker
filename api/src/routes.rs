@@ -26,7 +26,7 @@ pub async fn timetable_raw(
     Query(params): Query<TimetableParams>,
 ) -> Result<axum::response::Html<String>, AppError> {
     let week = parse_week(params.week.as_deref())?;
-    let client = DualisClient::new()?;
+    let client = DualisClient::new(state.login_guard.clone())?;
     let html = client
         .fetch_timetable_raw(
             &state.config.dualis_username,
@@ -51,7 +51,7 @@ pub async fn timetable(
     let week = parse_week(params.week.as_deref())?;
     info!(week = %format!("{}-W{:02}", week.year(), week.week()), "Fetching timetable");
 
-    let client = DualisClient::new()?;
+    let client = DualisClient::new(state.login_guard.clone())?;
     let timetable = client
         .fetch_timetable(
             &state.config.dualis_username,
@@ -199,7 +199,7 @@ pub async fn calendar_ics(
         info!(?from_date, ?to_date, weeks_count = weeks.len(), "Custom date range requested, bypassing cache");
     }
 
-    let client = DualisClient::new()?;
+    let client = DualisClient::new(state.login_guard.clone())?;
     let timetables = client
         .fetch_timetables(
             &state.config.dualis_username,

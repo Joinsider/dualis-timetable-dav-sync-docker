@@ -47,6 +47,14 @@ Calendar clients (Apple Calendar, Google Calendar, Thunderbird, etc.) can subscr
 | `UID_DOMAIN` | `schedule-sync.local` | Domain suffix for event UIDs |
 | `TIMEZONE` | `Europe/Berlin` | IANA timezone for event times |
 | `CACHE_TTL_SECONDS` | `3600` | How long to cache the calendar before re-fetching from Dualis |
+| `LOGIN_MAX_RETRIES` | `2` | Re-login attempts allowed after a failed Dualis login before all logins are blocked (protects against the 10-attempt account lockout) |
+| `LOGIN_STATE_FILE` | `data/login-state.json` (`/data/login-state.json` in Docker) | Where the failed login counter is persisted across restarts |
+
+### Failed login protection
+
+Dualis locks your account after 10 failed logins. Consecutive failed logins are counted and persisted to `LOGIN_STATE_FILE` (a Docker volume at `/data`, so it survives container restarts and rebuilds). After the first failure plus `LOGIN_MAX_RETRIES` further failures, the server stops contacting Dualis and answers with `503`. A successful login resets the counter.
+
+To unlock: fix `DUALIS_USERNAME`/`DUALIS_PASSWORD` (a credential change resets the counter automatically) or delete the state file (`docker compose down -v` removes the volume).
 
 ## API Endpoints
 

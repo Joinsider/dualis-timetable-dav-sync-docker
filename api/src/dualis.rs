@@ -6,6 +6,8 @@
 ///
 /// URL pattern:
 ///   /scripts/mgrqispi.dll?APPNAME=CampusNet&PRGNAME=<page>&ARGUMENTS=-N<session>,...
+use std::sync::Arc;
+
 use chrono::{Datelike, Days, IsoWeek, NaiveDate, Weekday};
 use reqwest::{Client, ClientBuilder, redirect};
 use scraper::{Html, Selector};
@@ -13,6 +15,7 @@ use serde::Serialize;
 use tracing::{debug, info, warn};
 
 use crate::error::AppError;
+use crate::login_guard::LoginGuard;
 
 const BASE: &str = "https://dualis.dhbw.de";
 const DLL: &str = "/scripts/mgrqispi.dll";
@@ -48,16 +51,17 @@ pub struct Event {
 
 pub struct DualisClient {
     http: Client,
+    login_guard: Arc<LoginGuard>,
 }
 
 impl DualisClient {
-    pub fn new() -> Result<Self, AppError> {
+    pub fn new(login_guard: Arc<LoginGuard>) -> Result<Self, AppError> {
         let http = ClientBuilder::new()
             .cookie_store(true)
             .redirect(redirect::Policy::limited(10))
             .user_agent("Mozilla/5.0 (compatible; dualis-scraper/1.0)")
             .build()?;
-        Ok(Self { http })
+        Ok(Self { http, login_guard })
     }
 
     /// Log in, scrape the timetable for the given ISO week, return structured data.
@@ -104,7 +108,14 @@ impl DualisClient {
 // ── Login ─────────────────────────────────────────────────────────────────────
 
 impl DualisClient {
+    /// Log in, respecting the failed-login budget (see `login_guard.rs`).
     async fn login(&self, username: &str, password: &str) -> Result<Session, AppError> {
+        self.login_guard
+            .run(|| self.login_unguarded(username, password))
+            .await
+    }
+
+    async fn login_unguarded(&self, username: &str, password: &str) -> Result<Session, AppError> {
         let login_page_url = format!(
             "{BASE}{DLL}?APPNAME=CampusNet&PRGNAME=EXTERNALPAGES&ARGUMENTS=-N000000000000001,-N000324,-Awelcome"
         );
